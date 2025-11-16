@@ -18,7 +18,8 @@ export const createRoom = async (req, res) => {
     try {
         const newRoom = new Room({
             name,
-            members: memberIds
+            members: memberIds,
+            createdBy: req.user.userId
         });
         await newRoom.save();
         res.status(201).json({room: newRoom});

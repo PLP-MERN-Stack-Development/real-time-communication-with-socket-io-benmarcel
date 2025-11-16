@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { CheckCheck, Check, Smile, Trash2 } from "lucide-react";
 
 const Message = ({ message, isOwnMessage, onDelete, onReact }) => {
   const [showReactions, setShowReactions] = useState(false);
   const reactions = ['👍', '❤️', '😂', '😮', '😢', '👏'];
 
   return (
-    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4`}>
+    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-6`}>
       <div className={`max-w-xs lg:max-w-md ${isOwnMessage ? 'order-2' : 'order-1'}`}>
         {!isOwnMessage && (
           <div className="text-xs text-gray-500 mb-1">{message.senderUsername}</div>

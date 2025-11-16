@@ -55,7 +55,7 @@ export const messageEventHandlers = (io, socket) => {
 
       // Create message (using socket.userId and socket.username!)
       const newMessage = await Message.create({
-        senderId: socket.userId, // From authentication!
+        sender: socket.userId, // From authentication!
         senderUsername: socket.username, // From authentication!
         content: content.trim(),
         roomId: isPrivate ? null : roomId,
@@ -65,7 +65,7 @@ export const messageEventHandlers = (io, socket) => {
       });
 
       // Populate sender details for response
-      await newMessage.populate("senderId", "username avatar");
+      await newMessage.populate("sender", "username _id");
 
       // Update room metadata (if room message)
       if (!isPrivate && roomId) {
@@ -78,7 +78,7 @@ export const messageEventHandlers = (io, socket) => {
       // Prepare message data
       const messageData = {
         _id: newMessage._id,
-        senderId: newMessage.senderId,
+        sender: newMessage.sender,
         senderUsername: newMessage.senderUsername,
         content: newMessage.content,
         roomId: newMessage.roomId,
@@ -130,7 +130,7 @@ export const messageEventHandlers = (io, socket) => {
       }
 
       // Security: Only sender can delete their own message
-      if (message.senderId.toString() !== socket.userId) {
+      if (message.sender.toString() !== socket.userId) {
         const error = { error: "You can only delete your own messages" };
         if (callback) callback(error);
         return socket.emit("message-error", error);
@@ -138,7 +138,7 @@ export const messageEventHandlers = (io, socket) => {
 
       // // Soft delete (set deletedAt instead of actually deleting)
       message.deletedAt = new Date();
-      message.content = "[Message deleted]"; // Optional: hide content
+      message.content = "[Message deleted]"; // hide content
       await message.save();
 
       // Alternative: Hard delete
@@ -203,6 +203,7 @@ export const messageEventHandlers = (io, socket) => {
           (r) => !(r.userId.toString() === socket.userId && r.emoji === emoji)
         );
         await message.save();
+        
 
         // Emit reaction removed
         if (isPrivate) {
@@ -342,6 +343,21 @@ export const messageEventHandlers = (io, socket) => {
 
       await message.save();
 
+      if (!isPrivate && roomId) {
+        // 1. Recalculate the UNREAD count for THIS user in THIS room.
+        const newUnreadCount = await Message.countDocuments({
+            roomId: roomId,
+            readBy: { $nin: [socket.userId] } // Messages the user has NOT read
+        });
+
+        // 2. Emit the new count DIRECTLY TO THE READING USER'S SOCKET.
+        //    We do NOT broadcast or update the shared Room.messageCount field.
+        socket.emit('room-count-updated', {
+            roomId: roomId,
+            newCount: newUnreadCount // This will be 0 if all are read
+        });
+    }
+
       // Notify message sender that someone read their message
       const readData = {
         messageId,
@@ -352,7 +368,7 @@ export const messageEventHandlers = (io, socket) => {
 
       if (isPrivate) {
         // Notify sender in private chat
-        io.to(message.senderId.toString()).emit("message-read", readData);
+        io.to(message.sender.toString()).emit("message-read", readData);
       } else if (roomId) {
         // Notify in room (sender will see read receipt)
         io.to(roomId).emit("message-read", readData);

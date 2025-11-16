@@ -53,6 +53,7 @@ io.use((socket, next) => {
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             socket.userId = decoded.userId; // <-- userId is attached here!
+            socket.username = decoded.username
             next();
         } catch (err) {
             next(new Error("Authentication failed: Invalid token."));

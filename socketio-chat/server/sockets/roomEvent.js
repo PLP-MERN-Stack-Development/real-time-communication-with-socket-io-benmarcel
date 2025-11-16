@@ -19,7 +19,7 @@ export const roomEventHandlers = (io, socket) => {
       
       //  Check if room exists
       const room = await Room.findById(roomId)
-        .populate('members', 'username avatar status');
+        .populate('members', 'username');
       
       if (!room) {
         const error = { error: "Room not found" };
@@ -39,13 +39,13 @@ export const roomEventHandlers = (io, socket) => {
       const messages = await Message.find({ roomId })
         .sort({ createdAt: -1 })
         .limit(50)
-        .populate('senderId', 'username avatar');
+        .populate('sender', 'username _id');
       
       //  Get online users in this room
       const onlineUsers = await User.find({
         _id: { $in: room.members.map(m => m._id) },
-        status: 'online'
-      }).select('username avatar status');
+        online: true
+      }).select('username _id');
       
       //  Send room data to the user who joined
       socket.emit("room-joined", {

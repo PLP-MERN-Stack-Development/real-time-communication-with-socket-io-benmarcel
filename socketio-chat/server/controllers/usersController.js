@@ -23,3 +23,13 @@ export const getUserById = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 }
+
+export const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find().select("username email, _id");
+        return res.status(200).json(users);
+    } catch (error) {
+        console.error("Error fetching all users:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
